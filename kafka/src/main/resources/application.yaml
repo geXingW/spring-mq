@@ -1,0 +1,55 @@
+spring:
+  kafka:
+    bootstrap-servers:
+      - 192.168.100.104:9092
+      - 192.168.100.105:9092
+      - 192.168.100.106:9092
+
+    producer:
+      acks: -1 # 0-不应答；1-leader应答；-1或all ISR所有节点应答
+      batch-size: 16384 # 去缓冲区中一次拉16k的数据，发送到broker
+      retries: 1 # 发送失败重试发送的次数
+      retry_backoff_ms: 500 #重试间隔
+      max-request-size: 1048576  #每条消息大小限制 1M
+      buffer-memory: 33554432 #发送缓冲区大小32M
+      #压缩消息，支持四种类型，分别为：none、lz4、gzip、snappy，默认为none,lz4压缩比最高
+      compression-type: none
+      max_block_ms: 6000 #生产者空间不足时阻塞的时间，默认60s
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      transaction-id-prefix: example. #开启事务，并设置事务前缀
+
+    listener:
+      batch-listener: true # 是否开启批量处理
+      concurrency: 1 # 线程数
+      missing-topics-fatal: false # 监听的Topic不存在时，不报错
+
+      #RECORD 当每⼀条记录被消费者监听器（ListenerConsumer）处理之后提交
+      #BATCH 当每⼀批poll()的数据被消费者监听器（ListenerConsumer）处理之后提交
+      #TIME 当每⼀批poll()的数据被消费者监听器（ListenerConsumer）处理之后，距离上次提交时间⼤于TIME时提交
+      #COUNT 当每⼀批poll()的数据被消费者监听器（ListenerConsumer）处理之后，被处理record数量⼤于等于COUNT时提交
+      #COUNT_TIME TIME | COUNT　有⼀个条件满⾜时提交
+      #MANUAL 当每⼀批poll()的数据被消费者监听器（ListenerConsumer）处理之后, ⼿动调⽤Acknowledgment.acknowledge()后提交
+      #MANUAL_IMMEDIATE ⼿动调⽤Acknowledgment.acknowledge()后⽴即提交，⼀般使⽤这种
+      ack-mode: MANUAL_IMMEDIATE
+      poll-timeout: 3000 #消费超时时间
+
+    consumer:
+      enable-auto-commit: false # 是否开启自动提交
+      auto-commit-interval: 5000
+
+      #earliest
+      #当各分区下有已提交的offset时，从提交的offset开始消费；无提交的offset时，从头开始消费
+      #latest
+      #当各分区下有已提交的offset时，从提交的offset开始消费；无提交的offset时，消费新产生的该分区下的数据
+      #none
+      #topic各分区都存在已提交的offset时，从offset后开始消费；只要有一个分区不存在已提交的offset，则抛出异常
+      auto-offset-reset: earliest
+      fetch-min-size: 1 #每次拉取的最小数量
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring:
+          json:
+            trusted:
+              packages: "com.example.kafka.entity"

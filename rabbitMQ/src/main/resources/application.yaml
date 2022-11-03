@@ -1,0 +1,37 @@
+spring:
+  rabbitmq:
+    addresses: node-104:5672,node-105:5672,node-106:5672  #设置address自动忽略host
+    username: gexingw
+    password: 123456
+    virtual-host: / # 设置rabbitmq的vhost
+
+    #消息不管是否投递到交换机都进行ConfirmCallback回调，投递成功ack=true，否则为false
+    #交换机匹配到队列成功则不进行ReturnCallback回调，否则先进行ReturnCallback回调再进行ConfirmCallback回调
+    #如果消息成功投递到交换机，但没匹配到队列，则ConfirmCallback回调ack仍为true
+    # NONE值是禁用发布确认模式，是默认值
+    # CORRELATED值是发布消息成功到交换器后会触发回调方法，如1示例
+    # SIMPLE值经测试有两种效果，其一效果和CORRELATED值一样会触发回调方法，
+    #   其二在发布消息成功后使用rabbitTemplate调用waitForConfirms或waitForConfirmsOrDie方法等待broker节点返回发送结果，
+    #   根据返回结果来判定下一步的逻辑，要注意的点是waitForConfirmsOrDie方法如果返回false则会关闭channel，则接下来无法发送消息到broker;
+    publisher-confirm-type: none # correlated | simple
+
+    template:
+      mandatory: true # 消息路由失败通知监听者，而不是将消息丢弃
+      retry:
+        enabled: true # 开启重发机制
+        max-attempts: 3 # 最大重试次数，默认为3
+        initial-interval: 3000 # 重试间隔，单位毫秒。默认为1000.
+
+    listener:
+      simple:
+        acknowledge-mode: manual # manual手动提交, auto 自动提交
+        prefetch: 1 # 每次从RabbitMQ获取的消息数量
+        concurrency: 1 # 每个队列启动的消费者数量
+        max-concurrency: 3 # 每个队列启动的最大消费者数量
+        retry:
+          enabled: true # 开启消费重试机制
+          max-attempts: 3 #3 最大重试次数。默认为 3 。
+          initial-interval: 2000 # 重试间隔，单位为毫秒。默认为 1000 。
+          multiplier: 1 # 上一次重试时间的乘数
+          max-interval: 10S #两次尝试直减的最长持续时间
+
