@@ -7,6 +7,7 @@ import org.springframework.amqp.rabbit.core.BatchingRabbitTemplate;
 import org.springframework.amqp.rabbit.core.RabbitOperations;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -152,6 +153,27 @@ public class SendController {
             rabbitTemplate.convertAndSend(OrderlyMessage.EXCHANGE, OrderlyMessage.getRoutingKeyById(i), new OrderlyMessage(i));
         }
 
+        return true;
+    }
+
+    @RequestMapping("return-msg")
+    public Boolean returnMsg() {
+        for (int i = 0; i < 5; i++) {
+            rabbitTemplate.convertAndSend(DirectExchangeMessage.EXCHANGE, "not-exists-routing-key", new ReturnMessage(1));
+        }
+
+        return true;
+    }
+
+    @GetMapping("plg-delay-msg")
+    public Boolean pluginDelayMsg(){
+        for (int i = 1; i <= 5; i++) {
+            int finalI = i;
+            rabbitTemplate.convertAndSend(PluginDelayMessage.EXCHANGE, PluginDelayMessage.ROUTING_KEY, new PluginDelayMessage(i), processor -> {
+                processor.getMessageProperties().setDelay(1000 * finalI);
+                return processor;
+            });
+        }
         return true;
     }
 }

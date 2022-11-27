@@ -1,9 +1,11 @@
 spring:
   rabbitmq:
-    addresses: node-104:5672,node-105:5672,node-106:5672  #设置address自动忽略host
+    addresses: node-101:5672,node-102:5672,node-103:5672  #设置address自动忽略host
     username: gexingw
     password: 123456
     virtual-host: / # 设置rabbitmq的vhost
+    # 开启发送失败退回
+    publisher-returns: true
 
     #消息不管是否投递到交换机都进行ConfirmCallback回调，投递成功ack=true，否则为false
     #交换机匹配到队列成功则不进行ReturnCallback回调，否则先进行ReturnCallback回调再进行ConfirmCallback回调
@@ -34,4 +36,3 @@ spring:
           initial-interval: 2000 # 重试间隔，单位为毫秒。默认为 1000 。
           multiplier: 1 # 上一次重试时间的乘数
           max-interval: 10S #两次尝试直减的最长持续时间
-

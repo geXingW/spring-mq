@@ -7,14 +7,20 @@ import org.springframework.amqp.rabbit.batch.BatchingStrategy;
 import org.springframework.amqp.rabbit.batch.SimpleBatchingStrategy;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.BatchingRabbitTemplate;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.transaction.RabbitTransactionManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.amqp.SimpleRabbitListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler;
+
+import javax.annotation.PostConstruct;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by IntelliJ IDEA.
@@ -24,7 +30,30 @@ import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler;
  * @time: 10:31
  */
 @Configuration
-public class RabbitConfiguration {
+public class RabbitConfiguration implements RabbitTemplate.ReturnsCallback, RabbitTemplate.ConfirmCallback {
+
+    @Autowired
+    RabbitTemplate rabbitTemplate;
+
+    @Override
+    public void confirm(CorrelationData correlationData, boolean ack, String cause) {
+        if (ack) {
+            System.out.println("消息发送到Broker成功：" + correlationData);
+        } else {
+            System.out.println("消息发送到Broker失败：" + correlationData + ",cause:" + cause);
+        }
+    }
+
+    @Override
+    public void returnedMessage(ReturnedMessage returnedMessage) {
+        System.out.println("ReturnMessage：" + returnedMessage);
+    }
+
+    @PostConstruct
+    public void init() {
+        rabbitTemplate.setReturnsCallback(this);
+        rabbitTemplate.setConfirmCallback(this);
+    }
 
     /**
      * 默认交换机
@@ -362,7 +391,7 @@ public class RabbitConfiguration {
      * 顺序消息队列1
      */
     @Bean
-    public Queue orderlyQueue1(){
+    public Queue orderlyQueue1() {
         return new Queue(OrderlyMessage.QUEUE_1, true);
     }
 
@@ -370,7 +399,7 @@ public class RabbitConfiguration {
      * 顺序消息队列2
      */
     @Bean
-    public Queue orderlyQueue2(){
+    public Queue orderlyQueue2() {
         return new Queue(OrderlyMessage.QUEUE_2, true);
     }
 
@@ -378,7 +407,7 @@ public class RabbitConfiguration {
      * 顺序消息队列3
      */
     @Bean
-    public Queue orderlyQueue3(){
+    public Queue orderlyQueue3() {
         return new Queue(OrderlyMessage.QUEUE_3, true);
     }
 
@@ -386,7 +415,7 @@ public class RabbitConfiguration {
      * 顺序消息队列1
      */
     @Bean
-    public Queue orderlyQueue4(){
+    public Queue orderlyQueue4() {
         return new Queue(OrderlyMessage.QUEUE_4, true);
     }
 
@@ -394,7 +423,7 @@ public class RabbitConfiguration {
      * 顺序消息交换机
      */
     @Bean
-    public DirectExchange orderlyExchange(){
+    public DirectExchange orderlyExchange() {
         return new DirectExchange(OrderlyMessage.EXCHANGE, true, false);
     }
 
@@ -402,7 +431,7 @@ public class RabbitConfiguration {
      * 顺序消息队列1 绑定交换机
      */
     @Bean
-    public Binding orderlyQueueBinding1(){
+    public Binding orderlyQueueBinding1() {
         return BindingBuilder.bind(orderlyQueue1()).to(orderlyExchange()).with(OrderlyMessage.ROUTING_KEY_1);
     }
 
@@ -410,7 +439,7 @@ public class RabbitConfiguration {
      * 顺序消息队列2 绑定交换机
      */
     @Bean
-    public Binding orderlyQueueBinding2(){
+    public Binding orderlyQueueBinding2() {
         return BindingBuilder.bind(orderlyQueue2()).to(orderlyExchange()).with(OrderlyMessage.ROUTING_KEY_2);
     }
 
@@ -418,7 +447,7 @@ public class RabbitConfiguration {
      * 顺序消息队列3 绑定交换机
      */
     @Bean
-    public Binding orderlyQueueBinding3(){
+    public Binding orderlyQueueBinding3() {
         return BindingBuilder.bind(orderlyQueue3()).to(orderlyExchange()).with(OrderlyMessage.ROUTING_KEY_3);
     }
 
@@ -426,7 +455,7 @@ public class RabbitConfiguration {
      * 顺序消息队列4 绑定交换机
      */
     @Bean
-    public Binding orderlyQueueBinding4(){
+    public Binding orderlyQueueBinding4() {
         return BindingBuilder.bind(orderlyQueue4()).to(orderlyExchange()).with(OrderlyMessage.ROUTING_KEY_4);
     }
 
@@ -435,11 +464,31 @@ public class RabbitConfiguration {
      * 事务消息
      */
     @Bean
-    public RabbitTransactionManager rabbitTransactionManager(ConnectionFactory connectionFactory, RabbitTemplate rabbitTemplate){
+    public RabbitTransactionManager rabbitTransactionManager(ConnectionFactory connectionFactory, RabbitTemplate rabbitTemplate) {
         // 设置 RabbitTemplate 支持事务
         rabbitTemplate.setChannelTransacted(true);
 
         // 创建 RabbitTransactionManager 对象
         return new RabbitTransactionManager(connectionFactory);
+    }
+
+    /**
+     * Plugin Delay Exchange
+     */
+    @Bean
+    public CustomExchange pluginDelayExchange() {
+        Map<String, Object> args = new HashMap<>();
+        args.put("x-delayed-type", "direct");
+        return new CustomExchange(PluginDelayMessage.EXCHANGE, "x-delayed-message", true, false, args);
+    }
+
+    @Bean
+    public Queue pluginDelayQueue(){
+        return QueueBuilder.durable(PluginDelayMessage.QUEUE).build();
+    }
+
+    @Bean
+    public Binding pluginDelayQueueBinding(){
+        return BindingBuilder.bind(pluginDelayQueue()).to(pluginDelayExchange()).with(PluginDelayMessage.ROUTING_KEY).noargs();
     }
 }
